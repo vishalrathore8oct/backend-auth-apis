@@ -1,0 +1,32 @@
+# Ignore VS Code settings
+/.vscode
+
+# Ignore dependencies and build files
+/node_modules
+./dist
+build/
+coverage/
+
+# Ignore environment variables
+*.env
+.env
+.env.*
+
+# Ignore lock files
+package-lock.json
+yarn.lock
+
+# Ignore logs and temporary files
+logs/
+*.log
+public/
+out/
+tmp/
+
+# Ignore minified files
+*.min.js
+*.min.css
+
+# Ignore assets directory
+assets/
+
