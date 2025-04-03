@@ -11,8 +11,8 @@ const userSchema = new mongoose.Schema({
             localPath: String,
         },
         default: {
-            url: "https://i.pravatar.cc/150",
-            localPath: "",
+            url: "https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_1280.png",
+            localPath: null,
         },
     },
     username: {
@@ -42,10 +42,10 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
-    emailVerificationToken: {
-        type: String,
+    emailVerificationCode: {
+        type: Number,
     },
-    emailVerificationTokenExpires: {
+    emailVerificationCodeExpires: {
         type: Date,
     },
     resetPasswordToken: {
@@ -87,12 +87,25 @@ userSchema.methods.generateRefreshToken = function () {
     });
 }
 
-userSchema.methods.generateTemporaryToken = function () {
+userSchema.methods.generateEmailVerificationCode = function() {
+
+    const verificationCode = Math.floor(100000 + Math.random() * 900000); 
+    const verificationCodeExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    this.emailVerificationCode = verificationCode
+    this.emailVerificationCodeExpires = verificationCodeExpiry
+
+    return verificationCode
+}
+
+userSchema.methods.generateResetPasswordToken = function () {
     const unHashedToken = crypto.randomBytes(32).toString("hex");
     const hashedToken = crypto.createHash("sha256").update(unHashedToken).digest("hex");
-    const tokenExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const tokenExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    return { unHashedToken, hashedToken, tokenExpiry, };
+    this.resetPasswordToken = hashedToken;
+    this.resetPasswordTokenExpires = tokenExpiry;
+
+    return unHashedToken;
 }
 
 export const User = mongoose.model("User", userSchema);
