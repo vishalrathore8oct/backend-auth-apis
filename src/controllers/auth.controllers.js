@@ -172,5 +172,25 @@ const logoutUser = asyncHandler(async (req, res) => {
 
 });
 
+const getUser = asyncHandler(async (req, res) => {
+    const userId = req.user._id;
 
-export { registerUser, verifyEmail, resendVerificationCode, loginUser, logoutUser }
+    if (!userId) {
+        throw new ApiError(401, "Unauthorized! User not authenticated.");
+    }
+
+    const user = await User.findById(userId).select("-password -refreshToken");
+
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    res.status(200).json(new ApiResponse(200, "User retrieved successfully", user));
+})
+
+const forgotPassword = asyncHandler(async (req, res) => {
+    
+});
+
+
+export { registerUser, verifyEmail, resendVerificationCode, loginUser, logoutUser, getUser }
