@@ -4,7 +4,7 @@ export const userRegisterValidator = () => {
     return [
         body("username")
             .trim()
-            .notEmpty().withMessage("Username is required")
+            .notEmpty().withMessage("Username is reqregisteruired")
             .isLength({ min: 3, max: 13 }).withMessage("Username must be between 3 and 13 characters")
             .matches(/^[a-zA-Z0-9_]+$/).withMessage("Username can only contain letters, numbers, and underscores"),
 
@@ -41,3 +41,24 @@ export const userLoginValidator = () => {
             .notEmpty().withMessage("Password is required"),
     ];
 };
+
+export const verifyEmailValidator = () => {
+    return [
+        body("email")
+            .trim()
+            .notEmpty().withMessage("Email is required")
+            .isEmail().withMessage("Invalid email format"),
+        body("verificationCode")
+            .trim()
+            .notEmpty().withMessage("verificationCode is required")
+    ];
+}
+
+export const resendVerificationCodeValidator = () => {
+    return [
+        body("email")
+            .trim()
+            .notEmpty().withMessage("Email is required")
+            .isEmail().withMessage("Invalid email format"),
+    ];
+}

@@ -17,12 +17,13 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use("/static", express.static("public"))
 
-
 // Imort Routes
 import healthCheckRoutes from "./routes/healthCheck.routes.js";
+import authRoutes from "./routes/auth.routes.js"
 
 // Routes
 app.use("/api/v1/health-check", healthCheckRoutes)
+app.use("/api/v1/auth", authRoutes)
 
 // Global Error Handling Middleware
 app.use(errorHandler)
