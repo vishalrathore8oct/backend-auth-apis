@@ -101,5 +101,76 @@ const resendVerificationCode = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, "New verification code sent successfully", userData));
 });
 
+const loginUser = asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
 
-export { registerUser, verifyEmail, resendVerificationCode }
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        throw new ApiError(404, "User not found. Please sign up.");
+    }
+
+    if (!user.isEmailVerified) {
+        throw new ApiError(400, "Email not verified. Please verify your email before logging in.");
+    }
+
+    const isPasswordMatch = await user.isPasswordCorrect(password);
+
+    if (!isPasswordMatch) {
+        throw new ApiError(400, "Invalid email or password. Please try again.");
+    }
+
+    const accessToken = await user.generateAccessToken();
+    const refreshToken = await user.generateRefreshToken();
+
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+    }
+
+    res.cookie("accessToken", accessToken, {
+        ...cookieOptions,
+        maxAge: 24 * 60 * 60 * 1000
+    });
+
+    res.cookie("refreshToken", refreshToken, {
+        ...cookieOptions,
+        maxAge: 10 * 24 * 60 * 60 * 1000
+    });
+
+    const userData = await User.findById(user._id).select("-password -refreshToken");
+
+    res.status(200).json(new ApiResponse(200, "User logged in successfully", { user: userData, accessToken, refreshToken }));
+
+});
+
+const logoutUser = asyncHandler(async (req, res) => {
+
+    const userId = req.user._id;
+
+    if (!userId) {
+        throw new ApiError(401, "Unauthorized! User not authenticated.");
+    }
+    const user = await User.findByIdAndUpdate(userId, { $unset: { refreshToken: "" } }, { new: true });
+
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+    };
+
+    res.clearCookie("accessToken", cookieOptions);
+    res.clearCookie("refreshToken", cookieOptions);
+
+    res.status(200).json(new ApiResponse(200, "User logged out successfully"));
+
+});
+
+
+export { registerUser, verifyEmail, resendVerificationCode, loginUser, logoutUser }
