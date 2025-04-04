@@ -19,7 +19,7 @@ const registerUser = asyncHandler(async (req, res) => {
     const user = await User.create({
         username,
         email,
-        password, 
+        password,
         fullName,
     })
 
@@ -35,24 +35,23 @@ const registerUser = asyncHandler(async (req, res) => {
     const message = emailTemplateForVerificationCode(verificationCode)
 
     await sendVerificationEmail(email, "Your Account Verification Code", message)
-    
+
     const userData = await User.findById(user._id).select("-password -refreshToken")
 
     res.status(201).json(new ApiResponse(201, "User Registered Successfully and Verification code successfully sent to Registered Email", userData))
 
 })
 
-
 const verifyEmail = asyncHandler(async (req, res) => {
 
-    const { email, verificationCode} = req.body;
+    const { email, verificationCode } = req.body;
 
     const user = await User.findOne({ email, isEmailVerified: false })
 
     if (!user) {
         throw new ApiError(400, "User not found")
     }
-    
+
     if (user.emailVerificationCode !== Number(verificationCode)) {
         throw new ApiError(400, "Invalid Verification Code")
     }
@@ -60,12 +59,12 @@ const verifyEmail = asyncHandler(async (req, res) => {
     const currentTime = new Date(Date.now());
 
     console.log(currentTime.toLocaleString(), user.emailVerificationCodeExpires.toLocaleString());
-    
+
     if (currentTime > user.emailVerificationCodeExpires) {
         throw new ApiError(400, "Verification Code Expired")
     }
 
-    user.isEmailVerified = true 
+    user.isEmailVerified = true
     user.emailVerificationCode = undefined
     user.emailVerificationCodeExpires = undefined
     await user.save();

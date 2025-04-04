@@ -87,9 +87,9 @@ userSchema.methods.generateRefreshToken = function () {
     });
 }
 
-userSchema.methods.generateEmailVerificationCode = function() {
+userSchema.methods.generateEmailVerificationCode = function () {
 
-    const verificationCode = Math.floor(100000 + Math.random() * 900000); 
+    const verificationCode = Math.floor(100000 + Math.random() * 900000);
     const verificationCodeExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
     this.emailVerificationCode = verificationCode
     this.emailVerificationCodeExpires = verificationCodeExpiry
