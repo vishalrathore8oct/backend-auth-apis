@@ -74,9 +74,6 @@ export const forgotPasswordValidator = () => {
 
 export const resetPasswordValidator = () => {
     return [
-        param("resetToken")
-            .trim()
-            .notEmpty().withMessage("Reset token is required"),
         body("password")
             .trim()
             .notEmpty().withMessage("Password is required")
