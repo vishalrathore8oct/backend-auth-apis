@@ -2,8 +2,9 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.models.js";
-import { emailTemplateForVerificationCode } from "../utils/emailTemplates.js";
+import { emailTemplateForResetPasswordUrl, emailTemplateForVerificationCode } from "../utils/emailTemplates.js";
 import { sendVerificationEmail } from "../utils/sendEmail.js";
+import crypto from "crypto";
 
 
 const registerUser = asyncHandler(async (req, res) => {
@@ -189,8 +190,56 @@ const getUser = asyncHandler(async (req, res) => {
 })
 
 const forgotPassword = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email, isEmailVerified: true });
+
+    if (!user) {
+        throw new ApiError(404, "User not found or email not verified");
+    }
+
+    const resetToken = await user.generateResetPasswordToken();
+
+    const resetPasswordUrl = `${req.protocol}://${req.get("host")}/api/v1/auth/resetPassword/${resetToken}`;
+
+    await user.save();
+
+    const message = emailTemplateForResetPasswordUrl(resetPasswordUrl);
     
+    await sendVerificationEmail(email, "Your Reset Password URL", message);
+
+    const userData = await User.findById(user._id).select("-password -refreshToken");
+
+    res.status(200).json(new ApiResponse(200, "Reset password URL sent successfully to your registered Email", userData));
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+    const { resetToken } = req.params;
+    const { password } = req.body;
+
+    const hashedResetToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+    const user = await User.findOne({ resetPasswordToken: hashedResetToken});
+
+    if (!user) {
+        throw new ApiError(400, "invalid reset token");
+    }
+
+    const currentTime = new Date(Date.now());
+    if (currentTime > user.resetPasswordTokenExpires) {
+        throw new ApiError(400, "Reset token expired");
+    }
+
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordTokenExpires = undefined;
+    await user.save();
+
+    const userData = await User.findById(user._id).select("-password -refreshToken");
+
+    res.status(200).json(new ApiResponse(200, "Password reset successfully", userData));
+
 });
 
 
-export { registerUser, verifyEmail, resendVerificationCode, loginUser, logoutUser, getUser }
+export { registerUser, verifyEmail, resendVerificationCode, loginUser, logoutUser, getUser, forgotPassword, resetPassword }
