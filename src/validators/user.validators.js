@@ -44,10 +44,6 @@ export const userLoginValidator = () => {
 
 export const verifyEmailValidator = () => {
     return [
-        body("email")
-            .trim()
-            .notEmpty().withMessage("Email is required")
-            .isEmail().withMessage("Invalid email format"),
         body("verificationCode")
             .trim()
             .notEmpty().withMessage("verificationCode is required")

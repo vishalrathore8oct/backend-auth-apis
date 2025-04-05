@@ -45,21 +45,15 @@ const registerUser = asyncHandler(async (req, res) => {
 
 const verifyEmail = asyncHandler(async (req, res) => {
 
-    const { email, verificationCode } = req.body;
+    const { verificationCode } = req.body;
 
-    const user = await User.findOne({ email, isEmailVerified: false })
+    const user = await User.findOne({ emailVerificationCode: verificationCode })
 
     if (!user) {
-        throw new ApiError(400, "User not found")
-    }
-
-    if (user.emailVerificationCode !== Number(verificationCode)) {
         throw new ApiError(400, "Invalid Verification Code")
     }
 
     const currentTime = new Date(Date.now());
-
-    console.log(currentTime.toLocaleString(), user.emailVerificationCodeExpires.toLocaleString());
 
     if (currentTime > user.emailVerificationCodeExpires) {
         throw new ApiError(400, "Verification Code Expired")
@@ -205,7 +199,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
     await user.save();
 
     const message = emailTemplateForResetPasswordUrl(resetPasswordUrl);
-    
+
     await sendVerificationEmail(email, "Your Reset Password URL", message);
 
     const userData = await User.findById(user._id).select("-password -refreshToken");
@@ -219,7 +213,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 
     const hashedResetToken = crypto.createHash("sha256").update(resetToken).digest("hex");
 
-    const user = await User.findOne({ resetPasswordToken: hashedResetToken});
+    const user = await User.findOne({ resetPasswordToken: hashedResetToken });
 
     if (!user) {
         throw new ApiError(400, "invalid reset token");
