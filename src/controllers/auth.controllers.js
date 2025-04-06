@@ -4,7 +4,13 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.models.js";
 import { emailTemplateForResetPasswordUrl, emailTemplateForVerificationCode } from "../utils/emailTemplates.js";
 import { sendVerificationEmail } from "../utils/sendEmail.js";
+import { getGoogleSigningKey } from "../utils/googleJwks.js";
+import { verifyGoogleToken } from "../utils/googleVerifyToken.js";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
+import jwksClient from "jwks-rsa";
+import axios from "axios";
+import { log } from "console";
 
 
 const registerUser = asyncHandler(async (req, res) => {
@@ -236,4 +242,130 @@ const resetPassword = asyncHandler(async (req, res) => {
 });
 
 
-export { registerUser, verifyEmail, resendVerificationCode, loginUser, logoutUser, getUser, forgotPassword, resetPassword }
+// oAuth2.0 WITH GOOGLE OPENID CONNECT CONTROLLERS 
+const googleLogin = asyncHandler(async (req, res) => {
+
+    const state = crypto.randomBytes(32).toString("hex");
+    const nonce = crypto.randomBytes(32).toString("hex");
+    console.log(state, nonce);
+
+    res.cookie("oauth_state", state, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 600000,
+    });
+
+
+    res.cookie("oauth_nonce", nonce, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 600000,
+    });
+
+
+    const googleAuthUrl = `${process.env.GOOGLE_OAUTH_URL}?client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=${process.env.GOOGLE_REDIRECT_URI}&response_type=code&scope=email%20profile%20openid&state=${state}&nonce=${nonce}&access_type=offline&prompt=consent`;
+
+    res.redirect(googleAuthUrl);
+});
+
+const googleCallback = asyncHandler(async (req, res) => {
+    const { code, state } = req.query;
+    const { oauth_state, oauth_nonce } = req.cookies;
+
+    res.clearCookie("oauth_state");
+    res.clearCookie("oauth_nonce");
+
+    if (state !== oauth_state) {
+        throw new ApiError(400, "Invalid state parameter");
+    }
+
+    const tokenResponse = await axios.post(
+        process.env.GOOGLE_TOKEN_URL,
+        null,
+        {
+            params: {
+                client_id: process.env.GOOGLE_CLIENT_ID,
+                client_secret: process.env.GOOGLE_CLIENT_SECRET,
+                redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+                code,
+                grant_type: "authorization_code",
+            },
+        }
+    );
+
+    const { id_token, access_token, refresh_token } = tokenResponse.data;
+    if (!id_token) {
+        throw new ApiError(400, "Invalid Id Token");
+    }
+
+    const decodedToken = await verifyGoogleToken(id_token);
+    if (!decodedToken) {
+        throw new ApiError(400, "Invalid Id Token 2");
+    }
+
+    const { email, name, nonce, picture } = decodedToken;
+
+    if (!nonce || nonce !== oauth_nonce) {
+        throw new ApiError(400, "Invalid nonce");
+    }
+
+    const baseUsername = email.split("@")[0].toLowerCase();
+    let username = baseUsername;
+    let userExists = await User.findOne({ username });
+    let suffix = 1;
+    while (userExists) {
+        username = `${baseUsername}${suffix++}`;
+        userExists = await User.findOne({ username });
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+        user = await User.create({
+            email,
+            username,
+            fullName: name,
+            password: crypto.randomBytes(32).toString("hex"),
+            isEmailVerified: true,
+            avatar: {
+                url: picture,
+                localPath: null,
+            },
+            refreshToken: refresh_token || null,
+        });
+    } else if (refresh_token) {
+        user.refreshToken = refresh_token;
+        await user.save();
+    }
+
+    const newAccessToken = user.generateAccessToken();
+    const newRefreshToken = user.generateRefreshToken();
+
+    user.refreshToken = newRefreshToken;
+    await user.save();
+
+    const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+    }
+
+    res.cookie("accessToken", newAccessToken, {
+        ...cookieOptions,
+        maxAge: 24 * 60 * 60 * 1000
+    });
+
+    res.cookie("refreshToken", newRefreshToken, {
+        ...cookieOptions,
+        maxAge: 10 * 24 * 60 * 60 * 1000
+    });
+
+    const userData = await User.findById(user._id).select("-password -refreshToken");
+
+    res.status(200).json(new ApiResponse(200, "Google Login successful", { user: userData, accessToken: newAccessToken, refreshToken: newRefreshToken }));
+
+});
+
+
+
+
+export { registerUser, verifyEmail, resendVerificationCode, loginUser, logoutUser, getUser, forgotPassword, resetPassword, googleLogin, googleCallback }
