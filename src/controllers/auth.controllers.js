@@ -4,13 +4,9 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.models.js";
 import { emailTemplateForResetPasswordUrl, emailTemplateForVerificationCode } from "../utils/emailTemplates.js";
 import { sendVerificationEmail } from "../utils/sendEmail.js";
-import { getGoogleSigningKey } from "../utils/googleJwks.js";
 import { verifyGoogleToken } from "../utils/googleVerifyToken.js";
 import crypto from "crypto";
-import jwt from "jsonwebtoken";
-import jwksClient from "jwks-rsa";
 import axios from "axios";
-import { log } from "console";
 
 
 const registerUser = asyncHandler(async (req, res) => {
