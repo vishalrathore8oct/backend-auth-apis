@@ -2,6 +2,13 @@
 
 A secure authentication system built using **Node.js, Express, MongoDB, and JWT**. This system includes user registration, email verification, login, token-based authentication, and protected routes.
 
+## 📄 API Documentation
+
+👉 [View Full API Documentation on Postman 🚀](https://documenter.getpostman.com/view/37801111/2sB2cVf2Kn)
+[![Postman Docs](https://img.shields.io/badge/Postman-View%20API%20Docs-orange?logo=postman)](https://documenter.getpostman.com/view/37801111/2sB2cVf2Kn)
+
+
+
 ## Features
 - User Registration (Sign-up) with Email Verification
 - User Login (Sign-in)
