@@ -5,6 +5,7 @@ A secure authentication system built using **Node.js, Express, MongoDB, and JWT*
 ## 📄 API Documentation
 
 👉 [View Full API Documentation on Postman 🚀](https://documenter.getpostman.com/view/37801111/2sB2cVf2Kn)
+
 [![Postman Docs](https://img.shields.io/badge/Postman-View%20API%20Docs-orange?logo=postman)](https://documenter.getpostman.com/view/37801111/2sB2cVf2Kn)
 
 
